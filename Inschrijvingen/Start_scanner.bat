@@ -4,7 +4,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 REM ==========================================
 REM INSTELLINGEN
 REM ==========================================
-set "APP_DIR=C:\Users\patri\Dropbox\THE WHISKIES\klassement\Inschrijvingen\Start_scanner.bat"
+set "APP_DIR="C:\Users\patri\Documents\WHISKIES\klassement\Inschrijvingen\Start_scanner.bat"
 set "APP_FILE=App.py"
 set "PYTHON_EXE=%APP_DIR%\..\ .venv\Scripts\python.exe"
 
