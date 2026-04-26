@@ -4,11 +4,8 @@ setlocal EnableExtensions EnableDelayedExpansion
 REM ==========================================
 REM INSTELLINGEN
 REM ==========================================
-set "APP_DIR="C:\Users\patri\Documents\WHISKIES\klassement\Inschrijvingen\Start_scanner.bat"
+set "APP_DIR=C:\Users\patri\Documents\WHISKIES\klassement\Inschrijvingen"
 set "APP_FILE=App.py"
-set "PYTHON_EXE=%APP_DIR%\..\ .venv\Scripts\python.exe"
-
-REM spatie eruit halen uit vorig pad
 set "PYTHON_EXE=%APP_DIR%\..\.venv\Scripts\python.exe"
 
 REM ==========================================
