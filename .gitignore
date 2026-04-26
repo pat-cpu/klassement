@@ -1,9 +1,24 @@
+# Python
 .venv/
 __pycache__/
 *.pyc
 
+# Editors
+.vscode/
+.idea/
+
+# Output / logs
 output/
 *.log
 
+# Data (optioneel - afhankelijk van wat je wil)
+# data/
+
+# Backups & rommel
+*.zip
+*.pdf
+Inschrijvingen/backups/
+
+# OS
 .DS_Store
 Thumbs.db
