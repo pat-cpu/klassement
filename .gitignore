@@ -22,3 +22,7 @@ Inschrijvingen/backups/
 # OS
 .DS_Store
 Thumbs.db
+
+ARCHIEF/
+settings.json
+*.xlsm
