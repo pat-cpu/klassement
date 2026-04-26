@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Barcode Scanner + Kaart</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+  <div class="input-container">
+    <h1>Barcode Scanner</h1>
+
+<form method="post" action="/shutdown" class="shutdown-form" onsubmit="return confirm('Scanner afsluiten? Excel wordt vrijgegeven.');">
+  <button type="submit" class="btn-shutdown">Scanner afsluiten</button>
+</form>
+
+    {% if total_scans < 2 %}
+      <div id="excel-reminder" class="excel-reminder">
+        <div class="excel-reminder-text">
+          ⚠️ Eerst even <b>Whistloting.xlsm</b> Ctrl+Schit+D en in kolom F moet alles op "A" staan, daarna excel opslaan en sluiten
+          <br>Deze melding verdwijnt automatisch na <b>2</b> geslaagde scans.
+        </div>
+        <button type="button" id="closeExcelReminder" class="excel-reminder-close" aria-label="Sluiten">×</button>
+      </div>
+    {% endif %}
+
+    <div class="tellerbalk">
+      <div class="tellerkaart teller-total">
+        <span class="label">Totaal scans</span>
+        <span class="waarde">{{ total_scans }}</span>
+      </div>
+
+      <div class="tellerkaart teller-2">
+        <span class="label">Aantal keer “2”</span>
+        <span class="waarde">{{ count_2 }}</span>
+      </div>
+
+      <div class="tellerkaart teller-3">
+        <span class="label">Aantal keer “3”</span>
+        <span class="waarde">{{ count_3 }}</span>
+      </div>
+
+      <div class="tellerkaart teller-4">
+        <span class="label">Aantal keer “4”</span>
+        <span class="waarde">{{ count_4 }}</span>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="flash-messages">
+          {% for category, message in messages %}
+            <li class="{{ category }}">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+
+    <form id="scanForm" method="post">
+      <label for="barcode">Barcode:</label>
+      <input
+        type="text"
+        id="barcode"
+        name="barcode"
+        autocomplete="off"
+        inputmode="numeric"
+        pattern="\d{10,13}"
+        required
+        autofocus
+      >
+
+      <label for="aantal">Aantal:</label>
+      <input
+        type="number"
+        id="aantal"
+        name="aantal"
+        autocomplete="off"
+        min="1"
+        max="10"
+        required
+      >
+
+      <button type="submit">Verwerken</button>
+    </form>
+
+    <div id="aantal-display" class="aantal-display" style="display:none;"></div>
+  </div>
+
+  <div class="scanned-container">
+    <!-- <h2>Gescande Data</h2> -->
+
+    <table>
+      <thead>
+        <tr>
+          <th>Barcode</th>
+          <th>Volledige Naam</th>
+          <th>Aantal</th>
+          <th>Actie</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {# ✅ Nieuwste bovenaan #}
+        {% for item in scanned_data|reverse %}
+          <tr
+            {% if loop.first %}id="laatste-scan"{% endif %}
+            class="{% if loop.first %}laatste-scan{% endif %}"
+          >
+            <td>{{ item.barcode }}</td>
+            <td>{{ item.naam }}</td>
+            <td>{{ item.aantal }}</td>
+            <td>
+              <form method="post" action="{{ url_for('remove_entry') }}">
+                <input type="hidden" name="barcode" value="{{ item.barcode }}">
+                <input type="hidden" name="aantal" value="{{ item.aantal }}">
+                <button type="submit">Verwijderen</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    // ===========================
+    // Helpers
+    // ===========================
+    function setTableOffset(){
+      const topbar = document.querySelector('.input-container');
+      const table  = document.querySelector('.scanned-container');
+      if (!topbar || !table) return;
+      const extra = 15;
+      table.style.marginTop = (topbar.offsetHeight + extra) + 'px';
+    }
+
+    function focusLaatsteScan(){
+      const el = document.getElementById('laatste-scan');
+      if (!el) return;
+
+      // Werkt zowel bij page-scroll als bij een scrollcontainer
+      el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+
+    // ===========================
+    // Init
+    // ===========================
+    document.addEventListener('DOMContentLoaded', () => {
+      // PERFORMANCE: scan-fast modus
+      document.body.classList.add('scan-fast');
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'F9') document.body.classList.toggle('scan-fast');
+      });
+
+      setTableOffset();
+      focusLaatsteScan();
+
+      const barcodeInput  = document.getElementById('barcode');
+      const aantalInput   = document.getElementById('aantal');
+      const form          = document.getElementById('scanForm');
+      const aantalDisplay = document.getElementById('aantal-display');
+
+      let lastBarcode = null;
+
+      // focus netjes
+      try { barcodeInput.focus({ preventScroll: true }); }
+      catch { barcodeInput.focus(); }
+
+      // Barcode -> naar aantal
+      barcodeInput.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+
+        const value = barcodeInput.value.trim();
+        if (/^\d{10,13}$/.test(value)) {
+          lastBarcode = value;
+          aantalInput.focus();
+        }
+      });
+
+      // Aantal -> submit
+      aantalInput.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        if (!lastBarcode) return;
+
+        e.preventDefault();
+
+        const aantal = parseInt(aantalInput.value.trim(), 10);
+        if (Number.isNaN(aantal) || aantal < 1 || aantal > 10) return;
+
+        // kleur voor groot display
+        aantalDisplay.classList.remove('aantal-rood', 'aantal-oranje', 'aantal-groen');
+
+        if (aantal === 2) aantalDisplay.classList.add('aantal-oranje');
+        else if (aantal === 3 || aantal === 4) aantalDisplay.classList.add('aantal-groen');
+        else aantalDisplay.classList.add('aantal-rood');
+
+        // toon groot aantal
+        aantalDisplay.textContent = aantal;
+        aantalDisplay.style.display = 'block';
+        aantalDisplay.classList.add('show');
+
+        setTimeout(() => {
+          aantalDisplay.classList.remove('show');
+          aantalDisplay.style.display = 'none';
+        }, 800);
+
+        // barcode terugzetten voor submit
+        barcodeInput.value = lastBarcode;
+
+        // submit
+        setTimeout(() => {
+          if (form.requestSubmit) form.requestSubmit();
+          else form.submit();
+          lastBarcode = null;
+        }, 50);
+      });
+
+      // Banner sluiten
+      document.addEventListener('click', (e) => {
+        if (e.target && e.target.id === 'closeExcelReminder') {
+          const banner = document.getElementById('excel-reminder');
+          if (banner) banner.style.display = 'none';
+          setTimeout(setTableOffset, 50);
+        }
+      });
+
+      window.addEventListener('resize', setTableOffset);
+    });
+  </script>
+
+</body>
+</html>

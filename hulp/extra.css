@@ -1,0 +1,9 @@
+/* Verberg navigatie/elementen in print/PDF */
+@media print {
+  .no-print, nav.no-print {
+    display: none !important;
+  }
+}
+@media print {
+  a { color: inherit; text-decoration: none; }
+}
