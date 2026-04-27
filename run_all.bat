@@ -85,6 +85,8 @@ echo.
 echo ✅ Klaar. HTML staat in: output\%YEAR%\html\
 if /I "%PDF%"=="Ja" echo 📄 PDF's in: output\%YEAR%\pdf\
 
+
+
 :END
 pause
 endlocal
