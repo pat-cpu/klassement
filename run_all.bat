@@ -1,24 +1,33 @@
+
+
+
+
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul
 
-REM Ga naar de map waar dit .bat-bestand staat
 cd /d "%~dp0"
 
-REM Betrouwbaarder dan 'python'
-set "PY_EXE=py -3"
+REM Gebruik altijd de venv in deze map
+set "PY_EXE=%CD%\.venv\Scripts\python.exe"
 
-REM Vraag jaartal (seizoenstart) en of er PDF's gegenereerd moeten worden
+if not exist "%PY_EXE%" (
+  echo [FOUT] Python venv niet gevonden:
+  echo %PY_EXE%
+  echo.
+  echo Maak eerst de venv aan of plaats dit .bat-bestand in de juiste projectmap.
+  goto :END
+)
+
 set "YEAR=%~1"
 set "PDF=%~2"
 
-if not defined YEAR set /p YEAR=Seizoen (startjaar, bv. 2025):
-if not defined PDF set /p PDF=PDF's genereren? (Ja/Nee) [j/ja/n/nee]:
+if not defined YEAR set /p YEAR=Seizoen (startjaar, bv. 2025): 
+if not defined PDF set /p PDF=PDF's genereren? (Ja/Nee) [j/ja/n/nee]: 
 
 if "%YEAR%"=="" set "YEAR=2025"
 if "%PDF%"=="" set "PDF=Ja"
 
-REM Normaliseer PDF input (j/ja/y/yes -> Ja, n/nee -> Nee)
 if /I "%PDF%"=="j" set "PDF=Ja"
 if /I "%PDF%"=="ja" set "PDF=Ja"
 if /I "%PDF%"=="y" set "PDF=Ja"
@@ -30,7 +39,6 @@ echo === Gebruik Python: %PY_EXE%
 echo Seizoen=%YEAR%  PDF=%PDF%
 echo.
 
-REM Check of de scripts bestaan
 if not exist "scores_ophalen.py" (
   echo [FOUT] scores_ophalen.py ontbreekt.
   goto :END
@@ -42,13 +50,12 @@ if not exist "main.py" (
 )
 
 REM 1) CSV's ophalen
-%PY_EXE% "scores_ophalen.py" --jaar %YEAR%
+"%PY_EXE%" "scores_ophalen.py" --jaar %YEAR%
 if errorlevel 1 (
   echo [FOUT] scores_ophalen.py mislukte.
   goto :END
 )
 
-REM Toon CSV's
 echo ---- CSV's in data\%YEAR% ----
 if exist "data\%YEAR%\*.csv" (
   dir /b "data\%YEAR%\*.csv"
@@ -57,24 +64,19 @@ if exist "data\%YEAR%\*.csv" (
 )
 echo.
 
-REM Zorg dat outputmap bestaat
 if not exist "output\%YEAR%" (
   mkdir "output\%YEAR%"
 )
 
-REM Maak timestamp aan voor log
 for /f %%a in ('powershell -Command "Get-Date -Format yyyyMMdd_HHmm"') do set "TIMESTAMP=%%a"
 set "LOGFILE=output\%YEAR%\run_%TIMESTAMP%.log"
+
 echo Logbestand: %LOGFILE%
 echo.
 
-REM 2) HTML + PDF genereren: eerst LIVE tonen
-echo === main.py (live output) ===
-%PY_EXE% "main.py" --jaar %YEAR% --pdf %PDF%
+echo === main.py ===
+"%PY_EXE%" "main.py" --jaar %YEAR% --pdf %PDF%
 set "RC=%ERRORLEVEL%"
-
-REM En daarna dezelfde run nog eens naar log (stil)
-%PY_EXE% "main.py" --jaar %YEAR% --pdf %PDF% 1>>"%LOGFILE%" 2>&1
 
 if not "%RC%"=="0" (
   echo [FOUT] main.py mislukte. Zie log: %LOGFILE%
@@ -84,8 +86,6 @@ if not "%RC%"=="0" (
 echo.
 echo ✅ Klaar. HTML staat in: output\%YEAR%\html\
 if /I "%PDF%"=="Ja" echo 📄 PDF's in: output\%YEAR%\pdf\
-
-
 
 :END
 pause
