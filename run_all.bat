@@ -87,6 +87,9 @@ echo.
 echo ✅ Klaar. HTML staat in: output\%YEAR%\html\
 if /I "%PDF%"=="Ja" echo 📄 PDF's in: output\%YEAR%\pdf\
 
+REM 👉 HIER toevoegen
+if /I "%PDF%"=="Ja" start "" "output\%YEAR%\pdf"
+
 :END
 pause
 endlocal
