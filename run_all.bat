@@ -8,16 +8,36 @@ chcp 65001 >nul
 
 cd /d "%~dp0"
 
-REM Gebruik altijd de venv in deze map
+REM Maak venv automatisch indien ontbreekt
+if not exist ".venv\Scripts\python.exe" (
+  echo [INFO] Geen venv gevonden. Nieuwe venv wordt aangemaakt...
+  py -3 -m venv .venv
+
+  if errorlevel 1 (
+    echo [FOUT] Venv aanmaken mislukt.
+    goto :END
+  )
+)
+
 set "PY_EXE=%CD%\.venv\Scripts\python.exe"
 
-if not exist "%PY_EXE%" (
-  echo [FOUT] Python venv niet gevonden:
-  echo %PY_EXE%
-  echo.
-  echo Maak eerst de venv aan of plaats dit .bat-bestand in de juiste projectmap.
-  goto :END
+REM Installeer requirements indien aanwezig
+if exist "requirements.txt" (
+  echo [INFO] Packages controleren/installeren...
+  "%PY_EXE%" -m pip install --upgrade pip
+  "%PY_EXE%" -m pip install -r requirements.txt
+
+  if errorlevel 1 (
+    echo [FOUT] Installatie van requirements mislukt.
+    goto :END
+  )
+) else (
+  echo [WAARSCHUWING] requirements.txt niet gevonden.
 )
+
+
+REM Gebruik altijd de venv in deze map
+set "PY_EXE=%CD%\.venv\Scripts\python.exe"
 
 set "YEAR=%~1"
 set "PDF=%~2"
